@@ -689,6 +689,10 @@ function! s:bufopen(lines)
 endfunction
 
 function! fzf#vim#_format_buffer(b)
+  if (a:b == 'EMPTY')
+    " we need these goofy extra fields for Reasons (bc we pass with-nth below)
+    return s:strip(printf(".\t.\t%s", s:red('== NO ENTRIES ==', 'Exception')))
+  endif
   let name = bufname(a:b)
   let line = exists('*getbufinfo') ? getbufinfo(a:b)[0]['lnum'] : 0
   let name = empty(name) ? '[No Name]' : fnamemodify(name, ":p:~:.")
@@ -719,11 +723,18 @@ function! fzf#vim#buffers(...)
   if bufnr('') == get(sorted, 0, 0)
       call remove(sorted, 0)
   endif
+
+  let header_lines = '--header-lines=0'
+  if len(sorted) == 0
+      call add(sorted, 'EMPTY')
+      let header_lines = '--header-lines=1'
+  endif
+
   let tabstop = len(max(sorted)) >= 4 ? 9 : 8
   return s:fzf('buffers', {
   \ 'source':  map(sorted, 'fzf#vim#_format_buffer(v:val)'),
   \ 'sink*':   s:function('s:bufopen'),
-  \ 'options': ['+m', '-x', '--tiebreak=index', '--ansi', '-d', '\t', '--with-nth', '3..', '-n', '2,1..2', '--prompt', 'Buf> ', '--query', query, '--preview-window', '+{2}-/2', '--tabstop', tabstop]
+  \ 'options': ['+m', '-x', '--tiebreak=index', header_lines, '--ansi', '-d', '\t', '--with-nth', '3..', '-n', '2,1..2', '--prompt', 'Buf> ', '--query', query, '--preview-window', '+{2}-/2', '--tabstop', tabstop]
   \}, args)
 endfunction
 
